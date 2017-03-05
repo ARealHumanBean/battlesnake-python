@@ -6,6 +6,8 @@ import math
 
 DEBUG = False
 
+last_move = None
+
 taunts = [
   "Don't tread on me!",
   "Full of MSG!",
@@ -128,6 +130,7 @@ def find_valid_directions(snake_head, collidable_coords):
 @bottle.post('/move')
 def move():
     data = bottle.request.json
+    global last_move
 
     if (DEBUG):
         print "/move"
@@ -159,19 +162,35 @@ def move():
     # add snakes
     for snake in snakes:
         for coord in snake['coords']:
-            collidable_coords.append(coord)
+            if snake == our_snake:
+                collidable_coords.append(coord)
+            else:
+                collidable_coords.append(coord)
+                collidable_coords.append([coord[0], coord[1]-1])
+                collidable_coords.append([coord[0]+1, coord[1]])
+                collidable_coords.append([coord[0], coord[1]+1])
+                collidable_coords.append([coord[0]-1, coord[1]])
 
     food_target = find_nearest_safe_food(our_snake, snakes, food)
     chosen_direction = move_to_target(our_snake_head, food_target)
     valid_directions = find_valid_directions(our_snake_head, collidable_coords)
+    if last_move != None:
+        if last_move == 'left':
+            valid_directions.remove('right')
+        elif last_move == 'right':
+            valid_directions.remove('left')
+        elif last_move == 'up':
+            valid_directions.remove('down')
+        elif last_move == 'down':
+            valid_directions.remove('up')
 
     pprint.pprint(valid_directions)
 
     try:
         valid_directions.index(chosen_direction)
-        chosen_direction = random.choice(valid_directions)
     except ValueError:
-        print "valid direction!"
+        print "invalid direction!"
+        chosen_direction = random.choice(valid_directions)
 
     return {
         'move': chosen_direction,
