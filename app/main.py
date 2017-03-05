@@ -203,14 +203,9 @@ def move():
     if len(valid_directions) == 0:
         chosen_direction = 'down'
 
-    taunt = ''
-
-    if turn % 5 == 0:
-        taunt = random.choice(taunts)
-
     return {
         'move': chosen_direction,
-        'taunt': taunt,
+        'taunt': random.choice(taunts),
     }
 \
 # Expose WSGI app (so gunicorn can find it)
