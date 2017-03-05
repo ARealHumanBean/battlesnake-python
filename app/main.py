@@ -9,10 +9,10 @@ DEBUG = False
 last_move = None
 
 taunts = [
-  "Don't tread on me!",
-  "Full of MSG!",
-  "ABCDEFG",
-  "testing!"
+    "Don't tread on me!",
+    "MSG makes snakes great!",
+    "<outdated meme>",
+    "Get these snakes off my motherlovin' plain",
 ]
 
 @bottle.route('/static/<path:path>')
@@ -32,9 +32,13 @@ def start():
     board_width = data['width']
     board_height = data['height']
 
-    head_url = '%s://%s/static/head.png' % (
-        bottle.request.urlparts.scheme,
-        bottle.request.urlparts.netloc
+    #head_url = '%s://%s/static/head.png' % (
+    #    bottle.request.urlparts.scheme,
+    #    bottle.request.urlparts.netloc
+    #)
+
+    head_url = '%s://i.imgur.com/I8thKzr.jpg' % (
+        bottle.request.urlparts.scheme
     )
 
     return {
@@ -146,6 +150,7 @@ def move():
     our_snake = find_our_snake(you, snakes)
     our_snake_length = len(our_snake['coords'])
     our_snake_head = our_snake['coords'][0]
+    turn = data['turn']
 
     print "Snake Head: " + str(our_snake_head[0]) + "," + str(our_snake_head[1])
 
@@ -161,15 +166,18 @@ def move():
 
     # add snakes
     for snake in snakes:
-        for coord in snake['coords']:
+        for i, coord in enumerate(snake['coords']):
             if snake == our_snake:
                 collidable_coords.append(coord)
             else:
-                collidable_coords.append(coord)
-                collidable_coords.append([coord[0], coord[1]-1])
-                collidable_coords.append([coord[0]+1, coord[1]])
-                collidable_coords.append([coord[0], coord[1]+1])
-                collidable_coords.append([coord[0]-1, coord[1]])
+                if i == 0:
+                    collidable_coords.append(coord)
+                    collidable_coords.append([coord[0], coord[1]-1])
+                    collidable_coords.append([coord[0]+1, coord[1]])
+                    collidable_coords.append([coord[0], coord[1]+1])
+                    collidable_coords.append([coord[0]-1, coord[1]])
+                else:
+                    collidable_coords.append(coord)
 
     food_target = find_nearest_safe_food(our_snake, snakes, food)
     chosen_direction = move_to_target(our_snake_head, food_target)
@@ -192,9 +200,17 @@ def move():
         print "invalid direction!"
         chosen_direction = random.choice(valid_directions)
 
+    if len(valid_directions) == 0:
+        chosen_direction = 'down'
+
+    taunt = ''
+
+    if turn % 5 == 0:
+        taunt = random.choice(taunts)
+
     return {
         'move': chosen_direction,
-        'taunt': random.choice(taunts),
+        'taunt': taunt,
     }
 \
 # Expose WSGI app (so gunicorn can find it)
