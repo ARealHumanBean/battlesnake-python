@@ -4,7 +4,7 @@ import random
 import pprint
 import math
 
-DEBUG = True
+DEBUG = False
 
 taunts = [
   "Don't tread on me!",
@@ -12,9 +12,6 @@ taunts = [
   "ABCDEFG",
   "testing!"
 ]
-
-last_move = None
-last_move_count = 0
 
 @bottle.route('/static/<path:path>')
 def static(path):
@@ -51,15 +48,6 @@ def distance_between_coords(first, second):
 def find_our_snake(snake_id, snakes):
     for snake in snakes:
         if snake['id'] == snake_id : return snake
-
-def find_distance_from_walls(snake, board_height, board_width):
-    snake_head_pos = snake['coords'][0]
-    return {
-        'north': snake_head_pos[1],
-        'east': board_width - snake_head_pos[0] - 1,
-        'south': board_height - snake_head_pos[1],
-        'west': snake_head_pos[0],
-    }
 
 def find_nearest_safe_food(snake, snakes, food_items):
     snake_head_pos = snake['coords'][0]
@@ -102,6 +90,41 @@ def move_to_target(source, target):
             else:
                 return 'down'
 
+def find_valid_directions(snake_head, collidable_coords):
+    valid_directions = []
+
+    pprint.pprint(collidable_coords)
+    pprint.pprint([snake_head[0], snake_head[1]-1])
+    pprint.pprint([snake_head[0]+1, snake_head[1]])
+    pprint.pprint([snake_head[0], snake_head[1]+1])
+    pprint.pprint([snake_head[0]-1, snake_head[1]])
+
+    # check "up"
+    try:
+        collidable_coords.index([snake_head[0], snake_head[1]-1])
+    except ValueError:
+        valid_directions.append('up')
+
+    # check "right"
+    try:
+        collidable_coords.index([snake_head[0]+1, snake_head[1]])
+    except ValueError:
+        valid_directions.append('right')
+
+    # check "down"
+    try:
+        collidable_coords.index([snake_head[0], snake_head[1]+1])
+    except ValueError:
+        valid_directions.append('down')
+
+    # check "left"
+    try:
+        collidable_coords.index([snake_head[0]-1, snake_head[1]])
+    except ValueError:
+        valid_directions.append('left')
+
+    return valid_directions
+
 @bottle.post('/move')
 def move():
     data = bottle.request.json
@@ -119,26 +142,36 @@ def move():
     directions = ['up', 'down', 'left', 'right']
     our_snake = find_our_snake(you, snakes)
     our_snake_length = len(our_snake['coords'])
-    wall_distances = find_distance_from_walls(our_snake, board_height, board_width)
+    our_snake_head = our_snake['coords'][0]
 
-    valid_direction = False
-    while valid_direction == False:
-        chosen_direction = random.choice(directions)
-        if chosen_direction == 'up':
-            if wall_distances['north'] > 0:
-                valid_direction = True
-        elif chosen_direction == 'right':
-            if wall_distances['east'] > 0:
-                valid_direction = True
-        elif chosen_direction == 'down':
-            if wall_distances['south'] > 0:
-                valid_direction = True
-        else:
-            if wall_distances['west'] > 0:
-                valid_direction = True
+    print "Snake Head: " + str(our_snake_head[0]) + "," + str(our_snake_head[1])
+
+    collidable_coords = []
+
+    # add walls
+    for x in range(0, board_width):
+        collidable_coords.append([x, -1])
+        collidable_coords.append([x, board_height])
+    for y in range(0, board_height):
+        collidable_coords.append([-1, y])
+        collidable_coords.append([board_width, y])
+
+    # add snakes
+    for snake in snakes:
+        for coord in snake['coords']:
+            collidable_coords.append(coord)
 
     food_target = find_nearest_safe_food(our_snake, snakes, food)
-    chosen_direction = move_to_target(our_snake['coords'][0], food_target)
+    chosen_direction = move_to_target(our_snake_head, food_target)
+    valid_directions = find_valid_directions(our_snake_head, collidable_coords)
+
+    pprint.pprint(valid_directions)
+
+    try:
+        valid_directions.index(chosen_direction)
+        chosen_direction = random.choice(valid_directions)
+    except ValueError:
+        print "valid direction!"
 
     return {
         'move': chosen_direction,
